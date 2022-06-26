@@ -82,9 +82,9 @@
 (defn statistic
   [_ row]
   (letfn [(read-byte [idx]
-            (if (= 0xFFFF (nth row idx))
+            (if (= 0xFFFF (aget row idx))
               nil
-              (nth row idx)))]
+              (aget row idx)))]
     {:digimon/stage (read-byte 0)
      :digimon/unlock-required? (not (nil? (read-byte 1)))
      :digimon/attribute (get-in attributes [(read-byte 2)] :free)

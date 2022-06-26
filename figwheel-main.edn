@@ -1,0 +1,2 @@
+{:connect-url      "ws://[[client-hostname]]:9500/figwheel-connect"
+ :watch-dirs       ["src"]}
