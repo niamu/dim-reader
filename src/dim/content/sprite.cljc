@@ -1,5 +1,6 @@
 (ns dim.content.sprite
   (:require
+   [clojure.math :as math]
    [dim.helpers.bytes :as helper.bytes]))
 
 (def label-by-sprite-count
@@ -34,7 +35,7 @@
 (defn scale-to-24bit
   [color from-bits]
   (/ (* color 0xFF)
-     (dec (Math/pow 2 from-bits))))
+     (dec (math/pow 2 from-bits))))
 
 #?(:clj
    (defn bgra
@@ -68,6 +69,41 @@
                   (recur (inc pixel)
                          bs))
                 bs)))))
+
+#?(:cljs
+   (defn image-data
+     [{:sprite/keys [width height data] :as sprite}]
+     (let [uint8clamped
+           (loop [pixel 0
+                  bs (new js/Uint8ClampedArray (* width height 4))]
+             (if (< pixel (* width height))
+               (let [b0 (bit-and 0xFF (aget data (inc (* pixel 2))))
+                     b1 (bit-and 0xFF (aget data (* pixel 2)))
+                     red (scale-to-24bit (bit-shift-right (bit-and b0 2r11111000)
+                                                          3)
+                                         5)
+                     green (scale-to-24bit
+                            (bit-or (bit-shift-left (bit-and b0 2r00000111) 3)
+                                    (bit-shift-right (bit-and b1 2r11100000) 5))
+                            6)
+                     blue (scale-to-24bit (bit-and b1 2r00011111)
+                                          5)
+                     alpha? (and (zero? red)
+                                 (zero? blue)
+                                 (= green 0xFF))
+                     alpha (if alpha? 0 0xFF)]
+                 (aset bs (+ (* pixel 4) 0) (unchecked-byte red))
+                 (aset bs (+ (* pixel 4) 1) (unchecked-byte (if alpha?
+                                                              0
+                                                              green)))
+                 (aset bs (+ (* pixel 4) 2) (unchecked-byte blue))
+                 (aset bs (+ (* pixel 4) 3) (unchecked-byte alpha))
+                 (recur (inc pixel)
+                        bs))
+               bs))]
+       (assoc sprite
+              :sprite/data
+              (new js/ImageData uint8clamped width height)))))
 
 (defn sprites
   [header ^bytes sprite-dimensions ^bytes sprite-data-section]
@@ -118,5 +154,6 @@
                             :sprite/width width
                             :sprite/height height
                             :sprite/data data}
-                           #?(:clj bgra)))))
+                           #?(:clj bgra
+                              :cljs image-data)))))
         sprites))))

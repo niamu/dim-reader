@@ -3,3 +3,4 @@
 .nrepl-port
 resources/dimcards/
 resources/public/js/
+.rebel_readline_history
