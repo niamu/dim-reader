@@ -7,5 +7,6 @@
            :figwheel
            {:extra-deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
                          com.bhauman/figwheel-main {:mvn/version "0.2.18"}
-                         com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}}
-            :main-opts ["-m" "figwheel.main" "--build" "figwheel" "--repl"]}}}
+                         com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}}}
+           :figwheel/repl
+           {:main-opts ["-m" "figwheel.main" "--build" "figwheel" "--repl"]}}}
