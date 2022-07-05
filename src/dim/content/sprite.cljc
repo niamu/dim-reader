@@ -5,31 +5,31 @@
 
 (def label-by-sprite-count
   {6 [:name
-      :idle
-      :idle2
+      :idle-1
+      :idle-2
       :walk
       :happy
       :sleep]
    7 [:name
-      :idle
-      :idle2
+      :idle-1
+      :idle-2
       :walk
       :happy
       :sleep
       :full]
    14 [:name
-       :idle
-       :idle2
-       :walk
-       :walk2
-       :run
-       :run2
-       :workout
-       :workout2
+       :idle-1
+       :idle-2
+       :walk-1
+       :walk-2
+       :run-1
+       :run-2
+       :workout-1
+       :workout-2
        :happy
        :sleep
        :attack
-       :run3
+       :run-3
        :full]})
 
 (defn scale-to-24bit

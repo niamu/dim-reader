@@ -15,14 +15,17 @@
   (let [id (helper.bytes/uint16-at bs 0x32)
         year (helper.bytes/uint16-at bs 0x36)
         month (helper.bytes/uint16-at bs 0x38)
-        day (helper.bytes/uint16-at bs 0x3a)]
+        day (helper.bytes/uint16-at bs 0x3a)
+        date-string (format "%04d-%02d-%02d"
+                            (+ year 2000) month day)]
     {:dim/id id
      :dim/descriptor (helper.bytes/bytes->string
                       (helper.bytes/selection bs 0x10 0x30))
      :dim/type (helper.bytes/uint16-at bs 0x30)
-     #_#_:dim/date (.parse (SimpleDateFormat. "yy/MM/dd")
-                           (format "%02d/%02d/%02d"
-                                   year month day))
+     :dim/date (->> (.parse #?(:clj (SimpleDateFormat. "yyyy-MM-dd")
+                               :cljs js/Date)
+                            date-string)
+                    #?(:cljs (new js/Date)))
      :dim/revision (helper.bytes/uint16-at bs 0x3c)
      #_#_:dim/header-signature (UUID/nameUUIDFromBytes
                                 (helper.bytes/selection bs 0x40 0x60))
