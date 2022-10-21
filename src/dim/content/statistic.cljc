@@ -87,11 +87,11 @@
               (aget row idx)))]
     {:digimon/stage (read-byte 0)
      :digimon/unlock-required? (not (nil? (read-byte 1)))
-     :digimon/attribute (get-in attributes [(read-byte 2)] :free)
+     :digimon/attribute (get-in attributes [(dec (read-byte 2))] :free)
      :digimon/disposition (get-in dispositions [(read-byte 3)])
      :digimon/small-attack (get-in small-attacks [(read-byte 4)])
      :digimon/big-attack (get-in big-attacks [(read-byte 5)])
-     :digimon/dp-starts (read-byte 6)
+     :digimon/dp-stars (read-byte 6)
      :digimon/dp (read-byte 7)
      :digimon/hp (read-byte 8)
      :digimon/ap (read-byte 9)

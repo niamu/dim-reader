@@ -185,8 +185,8 @@
                                 (into []))
             :dim/adventures (into [] adventures)})))
 
-#?(:clj
-   (comment
+(comment
+  #?(:clj
      (letfn [(save-ppm!
                [filename {:sprite/keys [width height ^bytes data] :as sprite}]
                (.mkdirs (io/file "resources/output"))
@@ -200,11 +200,13 @@
                                          (map reverse)
                                          flatten
                                          byte-array))))))]
-       (->> (read (io/file "resources/dimcards/DIM_Agumon.bin"))
+       (->> (read (io/file "resources/dimcards/DIM_AgumonEX.bin"))
             :dim/sprites
             (map-indexed (fn [idx sprite]
                            (save-ppm! idx sprite)))))
+     :cljs nil)
 
+  #?(:clj
      (do (time (->> (file-seq (io/file "resources/dimcards/"))
                     (filter (fn [f]
                               (let [filename (.getName f)]
@@ -214,4 +216,8 @@
                                         ".bin")))))
                     (pmap read)
                     doall))
-         nil)))
+         nil)
+     :cljs nil)
+
+  #?(:clj
+     (:dim/digimon (read (io/file "resources/dimcards/DIM_LouwemonEX.bin")))))
