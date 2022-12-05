@@ -1,12 +1,11 @@
 (ns browser-demo.core
   (:require
    [dim.core :as dim]
-   [dim.helpers.bytes :as helper.bytes]
    [dim.content.header :as header]))
 
 (defn spritesheet
   [sprites]
-  (let [sprites (->> (rest sprites)
+  (let [sprites (->> sprites
                      (drop-last 2)
                      vec)
         width (reduce + (map :sprite/width sprites))
@@ -42,7 +41,7 @@
               (set! (.-onload reader)
                     (fn [e]
                       (let [ab (.. e -target -result)
-                            dim (dim/read (.-name file) ab)
+                            dim (dim/read ab)
                             logo (get-in dim [:dim/sprites 0])
                             bg (get-in dim [:dim/sprites 1])
                             sprite-by-id (reduce (fn [m s]

@@ -1,26 +1,25 @@
 (ns dim.core
   (:refer-clojure :exclude [read])
   (:require
-   #?(:clj [clojure.java.io :as io])
    [dim.content.adventure :as adventure]
    [dim.content.evolution :as evolution]
    [dim.content.header :as header]
    [dim.content.jogress :as jogress]
    [dim.content.statistic :as statistic]
    [dim.content.sprite :as sprite]
-   [dim.helpers.bytes :as helper.bytes])
+   [util.bytes :as bytes])
   #?(:clj
      (:import
       [java.io File])))
 
 (defn valid-checksum?
   [^bytes bs]
-  (let [calculated-checksum (->> (helper.bytes/selection bs 0x0 0x3FFFFE)
-                                 (helper.bytes/->uint16-buffer)
+  (let [calculated-checksum (->> (bytes/selection bs 0x0 0x3FFFFE)
+                                 (bytes/->uint16-buffer)
                                  (reduce (fn [accl b]
                                            (bit-and 0xFFFF (+ accl b)))
                                          0))
-        dim-checksum (helper.bytes/uint16-at bs 0x3FFFFE)]
+        dim-checksum (bytes/uint16-at bs 0x3FFFFE)]
     (when (not= calculated-checksum dim-checksum)
       (throw (#?(:clj Exception.
                  :cljs js/Error.) (str "Invalid Checksum. Expected "
@@ -31,23 +30,21 @@
 
 (defn read
   #?(:clj [^File file]
-     :cljs [filename file])
-  (let [bs (-> (helper.bytes/file->bytes file)
+     :cljs [file])
+  (let [bs (-> (bytes/file->bytes file true)
                valid-checksum?)
-        filename #?(:clj (.getName file)
-                    :cljs filename)
-        header (header/header (helper.bytes/selection bs 0x0 0x1030))
-        statistics (->> (-> (helper.bytes/selection bs 0x30000 0x40000)
-                            (helper.bytes/->table (partial statistic/statistic
-                                                           header) 12))
+        header (header/header (bytes/selection bs 0x0 0x1030))
+        statistics (->> (-> (bytes/selection bs 0x30000 0x40000)
+                            (bytes/->table (partial statistic/statistic
+                                                    header) 12))
                         (reduce (fn [accl {:keys [digimon/stage] :as s}]
                                   (if (<= stage 5)
                                     (conj accl s)
                                     accl))
                                 []))
-        evolutions (-> (helper.bytes/selection bs 0x40000 0x50000)
-                       (helper.bytes/->table (partial evolution/evolution
-                                                      header) 12))
+        evolutions (-> (bytes/selection bs 0x40000 0x50000)
+                       (bytes/->table (partial evolution/evolution
+                                               header) 12))
         evolutions (->> evolutions
                         (map-indexed (fn [idx evolution]
                                        (assoc evolution
@@ -55,9 +52,9 @@
                                               (keyword
                                                (str "dim" (:dim/id header))
                                                (str "evolution" idx))))))
-        adventures (-> (helper.bytes/selection bs 0x50000 0x60000)
-                       (helper.bytes/->table (partial adventure/adventure
-                                                      header) 5))
+        adventures (-> (bytes/selection bs 0x50000 0x60000)
+                       (bytes/->table (partial adventure/adventure
+                                               header) 5))
         adventures (->> adventures
                         (map-indexed (fn [idx adventure]
                                        (assoc adventure
@@ -67,22 +64,16 @@
                                                (str "adventure" idx))
                                               :adventure/stage
                                               (inc idx)))))
-        jogresses (-> (helper.bytes/selection bs 0x70000 0x80000)
-                      (helper.bytes/->table (partial jogress/jogress
-                                                     header) 5)
+        jogresses (-> (bytes/selection bs 0x70000 0x80000)
+                      (bytes/->table (partial jogress/jogress
+                                              header) 5)
                       flatten)
         specific-jogresses
-        (-> (helper.bytes/selection bs 0x80000 0x100000)
-            (helper.bytes/->table (partial jogress/specific-jogress
-                                           header)
-                                  4))
-        sprites (sprite/sprites header
-                                (helper.bytes/selection bs
-                                                        0x60000
-                                                        0x70000)
-                                (helper.bytes/selection bs
-                                                        0x100000
-                                                        0x3FFFFE))
+        (-> (bytes/selection bs 0x80000 0x100000)
+            (bytes/->table (partial jogress/specific-jogress
+                                    header)
+                           4))
+        sprites (sprite/sprites header bs)
         evolutions-by-statistic-idx
         (-> (group-by :evolution/from evolutions)
             (update-vals #(map (fn [evolution]
@@ -148,8 +139,7 @@
                        (assoc :digimon/jogresses jogresses))))
                  statistics)]
     (merge header
-           {:dim/filename filename
-            :dim/sprites (->> (concat [(assoc (first sprites)
+           {:dim/sprites (->> (concat [(assoc (first sprites)
                                               :sprite/label :logo)
                                        (assoc (second sprites)
                                               :sprite/label :background)]
@@ -184,40 +174,3 @@
                                 (mapcat :digimon/jogresses)
                                 (into []))
             :dim/adventures (into [] adventures)})))
-
-(comment
-  #?(:clj
-     (letfn [(save-ppm!
-               [filename {:sprite/keys [width height ^bytes data] :as sprite}]
-               (.mkdirs (io/file "resources/output"))
-               (with-open [o (io/output-stream (str "resources/output/" filename
-                                                    ".ppm"))]
-                 (.write o (byte-array
-                            (concat (.getBytes (format "P6\n%d %d\n255\n"
-                                                       width height))
-                                    (->> data
-                                         (partition 3 4)
-                                         (map reverse)
-                                         flatten
-                                         byte-array))))))]
-       (->> (read (io/file "resources/dimcards/DIM_AgumonEX.bin"))
-            :dim/sprites
-            (map-indexed (fn [idx sprite]
-                           (save-ppm! idx sprite)))))
-     :cljs nil)
-
-  #?(:clj
-     (do (time (->> (file-seq (io/file "resources/dimcards/"))
-                    (filter (fn [f]
-                              (let [filename (.getName f)]
-                                (and (.isFile f)
-                                     (= (subs filename
-                                              (- (count filename) 4))
-                                        ".bin")))))
-                    (pmap read)
-                    doall))
-         nil)
-     :cljs nil)
-
-  #?(:clj
-     (:dim/digimon (read (io/file "resources/dimcards/DIM_LouwemonEX.bin")))))
